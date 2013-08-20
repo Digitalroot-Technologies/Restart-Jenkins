@@ -28,7 +28,7 @@ namespace RestartJenkins
       foreach (var theprocess in processlist.Where(theprocess => protectedProcessList.Contains(theprocess.ProcessName.ToLower())))
       {
         Console.WriteLine("{0} is running.", theprocess.ProcessName);
-        Environment.Exit(0);
+        Environment.Exit(1);
       }
 
       Console.WriteLine("Restarting Jenkins");
