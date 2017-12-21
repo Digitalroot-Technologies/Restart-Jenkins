@@ -93,10 +93,12 @@ namespace RestartJenkins.Clients
     /// <returns>The response from the web server at a string.</returns>
     public string HttpGet(string uri)
     {
-      WebClientEx webClient = new WebClientEx();
-      string basicAuthToken = Convert.ToBase64String(Encoding.Default.GetBytes($"{((NetworkCredential)Credentials).UserName}:{((NetworkCredential)Credentials).Password}"));
-      webClient.Headers["Authorization"] = "Basic " + basicAuthToken;
-      return webClient.DownloadString(uri);
+      using (WebClientEx webClient = new WebClientEx())
+      {
+        string basicAuthToken = Convert.ToBase64String(Encoding.Default.GetBytes($"{((NetworkCredential)Credentials).UserName}:{((NetworkCredential)Credentials).Password}"));
+        webClient.Headers["Authorization"] = "Basic " + basicAuthToken;
+        return webClient.DownloadString(uri);
+      }
     }
 
     /// <summary>
@@ -107,19 +109,23 @@ namespace RestartJenkins.Clients
     /// <returns>The response from the web server at a string.</returns>
     public string HttpPost(string uri, string parameters)
     {
-      WebClientEx webClient = new WebClientEx();
-      string basicAuthToken = Convert.ToBase64String(Encoding.Default.GetBytes($"{((NetworkCredential)Credentials).UserName}:{((NetworkCredential)Credentials).Password}"));
-      webClient.Headers["Authorization"] = "Basic " + basicAuthToken;
-      return webClient.UploadString(uri, "POST", String.Empty);
+      using (WebClientEx webClient = new WebClientEx())
+      {
+        string basicAuthToken = Convert.ToBase64String(Encoding.Default.GetBytes($"{((NetworkCredential)Credentials).UserName}:{((NetworkCredential)Credentials).Password}"));
+        webClient.Headers["Authorization"] = "Basic " + basicAuthToken;
+        return webClient.UploadString(uri, "POST", String.Empty);
+      }
     }
 
     public string HttpPost(string uri, string parameters, Crumb crumb)
     {
-      WebClientEx webClient = new WebClientEx();
-      string basicAuthToken = Convert.ToBase64String(Encoding.Default.GetBytes($"{((NetworkCredential)Credentials).UserName}:{((NetworkCredential)Credentials).Password}"));
-      webClient.Headers["Authorization"] = "Basic " + basicAuthToken;
-      webClient.Headers[crumb.crumbRequestField] = crumb.crumb;
-      return webClient.UploadString(uri, "POST", String.Empty);
+      using (WebClientEx webClient = new WebClientEx())
+      {
+        string basicAuthToken = Convert.ToBase64String(Encoding.Default.GetBytes($"{((NetworkCredential)Credentials).UserName}:{((NetworkCredential)Credentials).Password}"));
+        webClient.Headers["Authorization"] = "Basic " + basicAuthToken;
+        webClient.Headers[crumb.crumbRequestField] = crumb.crumb;
+        return webClient.UploadString(uri, "POST", String.Empty);
+      }
     }
 
     /// <summary>
