@@ -1,68 +1,68 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.ServiceProcess;
+using RestartJenkins.Clients;
+using RestartJenkins.Protocol;
 
 namespace RestartJenkins
 {
   class Program
   {
+    private static readonly JenkinsApiWebClient jenkinsApiWebclient = JenkinsApiWebClient.Instance;
+
     static void Main()
     {
-      var protectedProcessList = new List<string>
-                                 {
-                                   "nunit-agent-x86",
-                                   "nunit-agent",
-                                   "nunit-console-x86",
-                                   "nunit-console",
-                                   "accurev",
-                                   "nuget",
-                                   "msbuild",
-                                   "cmd",
-                                   "ccrewrite"
-                                 };
+      Write("==[ Restart Jenkins Started ]==");
 
-      var processlist = Process.GetProcesses();
+      jenkinsApiWebclient.JenkinApiUrl = System.Configuration.ConfigurationManager.AppSettings.Get("JenkinsApiUrl");
+      jenkinsApiWebclient.Port = System.Configuration.ConfigurationManager.AppSettings.Get("JenkinsApiPort");
+      jenkinsApiWebclient.SetCredentials(System.Configuration.ConfigurationManager.AppSettings.Get("JenkinsApiUsername"),
+                                         System.Configuration.ConfigurationManager.AppSettings.Get("JenkinsApiPassword"));
 
-      foreach (var theprocess in processlist.Where(theprocess => protectedProcessList.Contains(theprocess.ProcessName.ToLower())))
+      var runningJobs = GetRunningJob();
+
+      if (runningJobs.Count > 0)
       {
-        Console.WriteLine("{0} is running.", theprocess.ProcessName);
-        Environment.Exit(1);
+        foreach (Job job in runningJobs)
+        {
+          Write($"{job.name} running.");
+        }
+      }
+      else
+      {
+        Write("No Jobs running.");
+        Write("Restarting Jenknins.");
+        jenkinsApiWebclient.SafeRestart();
       }
 
-      Console.WriteLine("Restarting Jenkins");
-      RestartService("Jenkins", 500);
+      Write("==[ Restart Jenkins Ending ]==");
+#if DEBUG
+      Console.ReadKey();
+#endif
     }
 
-    /// <summary>
-    /// Method taken from http://www.csharp-examples.net/restart-windows-service/
-    /// Author: Jan Slama, 08-May-2008
-    /// </summary>
-    /// <param name="serviceName"></param>
-    /// <param name="timeoutMilliseconds"></param>
-    public static void RestartService(string serviceName, int timeoutMilliseconds)
+    private static void Write(string msg)
     {
-      var service = new ServiceController(serviceName);
-      try
+      Console.WriteLine(msg);
+      Logger.Log.Info(msg);
+    }
+
+    private static List<Job> GetRunningJob()
+    {
+      CurrentRunningJobsJsonResponse currentRunningJobsJsonResponse = jenkinsApiWebclient.GetRunningJobs();
+
+      List<Job> list = new List<Job>();
+      foreach (var job in currentRunningJobsJsonResponse.jobs)
       {
-        var millisec1 = Environment.TickCount;
-        var timeout = TimeSpan.FromMilliseconds(timeoutMilliseconds);
-
-        service.Stop();
-        service.WaitForStatus(ServiceControllerStatus.Stopped, timeout);
-
-        // count the rest of the timeout
-        var millisec2 = Environment.TickCount;
-        timeout = TimeSpan.FromMilliseconds(timeoutMilliseconds - (millisec2 - millisec1));
-
-        service.Start();
-        service.WaitForStatus(ServiceControllerStatus.Running, timeout);
+        if (job.lastBuild == null)
+        {
+          continue;
+        }
+        if (job.lastBuild.building)
+        {
+          list.Add(job);
+        }
       }
-      catch
-      {
-        
-      }
+      return list;
     }
   }
 }
